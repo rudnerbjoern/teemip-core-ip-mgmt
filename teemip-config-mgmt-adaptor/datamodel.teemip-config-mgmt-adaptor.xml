@@ -64,7 +64,7 @@
           <filter><![CDATA[SELECT IPAddress AS ip WHERE ip.status NOT IN ('allocated', 'reserved') AND ip.org_id = :this->org_id]]></filter>
           <dependencies>
             <attribute id="org_id"/>
-         </dependencies>
+          </dependencies>
           <sql>managementip_id</sql>
           <is_null_allowed>true</is_null_allowed>
           <target_class>IPAddress</target_class>
@@ -78,8 +78,8 @@
       <presentation>
         <default_search _delta="must_exist">
           <items>
-            <item id="managementip"  _delta="delete"/>
-            <item id="managementip_id"  _delta="define">
+            <item id="managementip" _delta="delete"/>
+            <item id="managementip_id" _delta="define">
               <rank>20</rank>
             </item>
           </items>
@@ -314,9 +314,9 @@
       <presentation>
         <details>
           <items>
-		  	<item id="ip_list">
-			  <rank>5</rank>
-			</item>
+            <item id="ip_list">
+              <rank>5</rank>
+            </item>
             <item id="ipaddress" _delta="delete"/>
             <item id="ipgateway" _delta="delete"/>
             <item id="ipmask" _delta="delete"/>
@@ -463,7 +463,7 @@
               <dashlet id="16" xsi:type="DashletBadge" _delta="delete"/>
               <dashlet id="17" xsi:type="DashletBadge" _delta="delete"/>
               <dashlet id="vlan" xsi:type="DashletBadge" _delta="delete"/>
-		    </dashlets>
+            </dashlets>
           </cell>
         </cells>
       </definition>
@@ -502,7 +502,11 @@ class TeemIpConfigMgmtAdaptor implements iApplicationUIExtension, iApplicationOb
 	            {
 	                $sOQL .= " UNION SELECT lnkIPInterfaceToIPAddress AS l1 JOIN NetworkDeviceVirtualInterface AS int ON l1.ipinterface_id = int.id JOIN NetworkDevice AS n ON int.networkdevice_id = n.id WHERE n.id = :ci_id";
 	                $sDisplayClass = 'NetworkDevice';
-	            }
+	            } elseif($oObject->Get('finalclass') == 'Server')
+              {
+                  $sOQL .= " UNION SELECT lnkIPInterfaceToIPAddress AS l2 JOIN ServerVirtualInterface AS int ON l2.ipinterface_id = int.id JOIN Server AS s ON int.server_id = s.id WHERE s.id = :ci_id";
+                  $sDisplayClass = 'Server';
+              }
 	            $oLnkSet =  new CMDBObjectSet(DBObjectSearch::FromOQL($sOQL), array(), array('ci_id' => $oObject->GetKey()));
 	            if ($oLnkSet->CountExceeds(0))
 	            {
