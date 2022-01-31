@@ -18,6 +18,7 @@ use Dict;
 use IPConfig;
 use IPSubnet;
 use IPUsage;
+use iTopWebPage;
 use MetaModel;
 use TeemIp\TeemIp\Extension\Framework\Helper\IPUtils;
 use TeemIp\TeemIp\Extension\Framework\Helper\iTree;
@@ -813,21 +814,9 @@ EOF
 	}
 
 	/**
-	 * Display main attributes for associated operation
-	 *
-	 * @param \WebPage $oP
-	 * @param $sOperation
-	 * @param $iFormId
-	 * @param $sPrefix
-	 * @param $aDefault
-	 */
-	function DisplayMainAttributesForOperation(WebPage $oP, $sOperation, $iFormId, $sPrefix, $aDefault) {
-	}
-
-	/**
 	 * @inheritdoc
 	 */
-	protected function DisplayActionFieldsForOperation(WebPage $oP, $sOperation, $iFormId, $aDefault) {
+	protected function DisplayActionFieldsForOperation(iTopWebPage $oP, $sOperation, $iFormId, $aDefault) {
 		$oP->add("<table>");
 		$oP->add('<tr><td style="vertical-align:top">');
 
@@ -960,7 +949,7 @@ EOF
 	/**
 	 * @inheritdoc
 	 */
-	protected function DisplayActionFieldsForOperationV3(WebPage $oP, $oClassForm, $sOperation, $aDefault) {
+	protected function DisplayActionFieldsForOperationV3(iTopWebPage $oP, $oClassForm, $sOperation, $aDefault) {
 		$oMultiColumn = new MultiColumn();
 		$oP->AddUIBlock($oMultiColumn);
 
@@ -1305,6 +1294,8 @@ EOF
 	 * @throws \OQLException
 	 */
 	public function ComputeValues() {
+		parent::ComputeValues();
+
 		$oIp = $this->Get('ip');
 		$iOrgId = $this->Get('org_id');
 
@@ -1517,6 +1508,7 @@ EOF
 					$oIp->Set('subnet_id', $iId);
 					$oIp->Set('ip', $oSubnetIp);
 					$oIp->Set('org_id', $iOrgId);
+					$oIp->Set('ipconfig_id', $this->Get('ipconfig_id'));
 					$oIp->Set('status', 'reserved');
 					$oIp->Set('usage_id', $sUsageNetworkIpId);
 					$oIp->DBInsert();
@@ -1541,6 +1533,7 @@ EOF
 						$oIp->Set('subnet_id', $iId);
 						$oIp->Set('ip', $oGatewayIp);
 						$oIp->Set('org_id', $iOrgId);
+						$oIp->Set('ipconfig_id', $this->Get('ipconfig_id'));
 						$oIp->Set('status', 'reserved');
 						$oIp->Set('usage_id', $sUsageGatewayIpId);
 						$oIp->DBInsert();
@@ -1605,6 +1598,7 @@ EOF
 					$oIp->Set('subnet_id', $iId);
 					$oIp->Set('ip', $oSubnetIp);
 					$oIp->Set('org_id', $iOrgId);
+					$oIp->Set('ipconfig_id', $this->Get('ipconfig_id'));
 					$oIp->Set('status', 'reserved');
 					$oIp->Set('usage_id', $sUsageNetworkIpId);
 					$oIp->DBInsert();
@@ -1628,6 +1622,7 @@ EOF
 					$oIp->Set('subnet_id', $iId);
 					$oIp->Set('ip', $oGatewayIp);
 					$oIp->Set('org_id', $iOrgId);
+					$oIp->Set('ipconfig_id', $this->Get('ipconfig_id'));
 					$oIp->Set('status', 'reserved');
 					$oIp->Set('usage_id', $sUsageGatewayIpId);
 					$oIp->DBInsert();

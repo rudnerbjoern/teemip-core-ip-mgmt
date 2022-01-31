@@ -21,6 +21,7 @@ use Dict;
 use IPBlock;
 use IPConfig;
 use IPv6Subnet;
+use iTopWebPage;
 use MetaModel;
 use TeemIp\TeemIp\Extension\Framework\Helper\IPUtils;
 use TeemIp\TeemIp\Extension\Framework\Helper\iTree;
@@ -184,7 +185,7 @@ class _IPv6Block extends IPBlock implements iTree {
 	 * @throws \MySQLException
 	 * @throws \OQLException
 	 */
-	public function GetFreeSpace($iPrefix, $iMaxOffer) {
+	public function GetFreeSpace($iPrefix, $iMaxOffer, $iOffsetIp = 0) {
 		$iOrgId = $this->Get('org_id');
 		$iKey = ($this->GetKey() > 0) ? $this->GetKey() : 0;
 		$aFreeSpace = array();
@@ -948,6 +949,7 @@ EOF
 		//	Create new block
 		$oNewBlock = MetaModel::NewObject('IPv6Block');
 		$oNewBlock->Set('org_id', $iOrgId);
+		$oNewBlock->Set('ipconfig_id', $this->Get('ipconfig_id'));
 		$oNewBlock->Set('name', $sNewName);
 		$oNewBlock->Set('parent_id', $this->Get('parent_id'));
 		$oNewBlock->Set('firstip', $oSplitIp);
@@ -1294,78 +1296,9 @@ EOF
 	}
 
 	/**
-	 * Display main block attributes
-	 *
-	 * @param \WebPage $oP
-	 * @param $sOperation
-	 * @param $iFormId
-	 * @param $sPrefix
-	 * @param $aDefault
-	 *
-	 * @throws \CoreException
+	 * @inheritdoc
 	 */
-	public function DisplayMainAttributesForOperation(WebPage $oP, $sOperation, $iFormId, $sPrefix, $aDefault) {
-		$sLabelOfAction = Dict::S($this->MakeUIPath($sOperation).':Summary');
-		$oP->SetCurrentTab($sLabelOfAction);
-
-		$oP->add('<table style="vertical-align:top"><tr>');
-		$oP->add('<td style="vertical-align:top">');
-		$aDetails = array();
-
-		// Parent ID
-		$sDisplayValue = $this->GetAsHTML('parent_id');
-		$aDetails[] = array(
-			'label' => '<span title="'.MetaModel::GetDescription('IPv6Block', 'parent_id').'">'.MetaModel::GetLabel('IPv6Block', 'parent_id').'</span>',
-			'value' => $sDisplayValue,
-		);
-
-		// First IP
-		$sDisplayValue = $this->GetAsHTML('firstip');
-		$aDetails[] = array(
-			'label' => '<span title="'.MetaModel::GetDescription('IPv6Block', 'firstip').'">'.MetaModel::GetLabel('IPv6Block', 'firstip').'</span>',
-			'value' => $sDisplayValue,
-		);
-
-		// Last IP
-		$sDisplayValue = $this->GetAsHTML('lastip');
-		$aDetails[] = array(
-			'label' => '<span title="'.MetaModel::GetDescription('IPv6Block', 'lastip').'">'.MetaModel::GetLabel('IPv6Block', 'lastip').'</span>',
-			'value' => $sDisplayValue,
-		);
-
-		// Requestor ID - Can be modified
-		$sInputId = $iFormId.'_'.'requestor_id';
-		$oAttDef = MetaModel::GetAttributeDef('IPObject', 'requestor_id');
-		$sValue = (array_key_exists('requestor_id', $aDefault)) ? $aDefault['requestor_id'] : $this->Get('requestor_id');
-		$iFlags = $this->GetAttributeFlags('requestor_id');
-		$aArgs = array('this' => $this, 'formPrefix' => $sPrefix);
-		$sHTMLValue = "<span id=\"field_{$sInputId}\">".$this->GetFormElementForField($oP, 'IPObject', 'requestor_id', $oAttDef, $sValue, '', $sInputId, '', $iFlags, $aArgs).'</span>';
-		$aDetails[] = array(
-			'label' => '<span title="'.$oAttDef->GetDescription().'">'.$oAttDef->GetLabel().'</span>',
-			'value' => $sHTMLValue,
-		);
-
-		$oP->Details($aDetails);
-		$oP->add('</td>');
-		$oP->add('</tr></table>');
-	}
-
-	/**
-	 * Display attributes associated to an operation for V < 3.0
-	 *
-	 * @param \WebPage $oP
-	 * @param $sOperation
-	 * @param $iFormId
-	 * @param $aDefault
-	 *
-	 * @throws \ArchivedObjectException
-	 * @throws \CoreException
-	 * @throws \CoreUnexpectedValue
-	 * @throws \DictExceptionMissingString
-	 * @throws \MySQLException
-	 * @throws \OQLException
-	 */
-	protected function DisplayActionFieldsForOperation(WebPage $oP, $sOperation, $iFormId, $aDefault) {
+	protected function DisplayActionFieldsForOperation(iTopWebPage $oP, $sOperation, $iFormId, $aDefault) {
 		$oP->add("<table>");
 		$oP->add('<tr><td style="vertical-align:top">');
 
@@ -1511,26 +1444,9 @@ EOF
 	}
 
 	/**
-	 * Display attributes associated to an operation for V >= 3.0
-	 *
-	 * @param \WebPage $oP
-	 * @param $oClassForm
-	 * @param $sOperation
-	 * @param $aDefault
-	 *
-	 * @throws \ArchivedObjectException
-	 * @throws \ConfigException
-	 * @throws \CoreException
-	 * @throws \CoreUnexpectedValue
-	 * @throws \DictExceptionMissingString
-	 * @throws \MySQLException
-	 * @throws \OQLException
-	 * @throws \ReflectionException
-	 * @throws \Twig\Error\LoaderError
-	 * @throws \Twig\Error\RuntimeError
-	 * @throws \Twig\Error\SyntaxError
+	 * @inheritdoc
 	 */
-	protected function DisplayActionFieldsForOperationV3(WebPage $oP, $oClassForm, $sOperation, $aDefault) {
+	protected function DisplayActionFieldsForOperationV3(iTopWebPage $oP, $oClassForm, $sOperation, $aDefault) {
 		$oMultiColumn = new MultiColumn();
 		$oP->AddUIBlock($oMultiColumn);
 
@@ -1571,6 +1487,9 @@ EOF
 				break;
 
 			case 'shrinkblock':
+				// Remind main attributes to user first
+				$this->DisplayMainAttributesForOperationV3($oP, $oColumn1);
+
 				$sLabelOfAction1 = Dict::S('UI:IPManagement:Action:Shrink:IPv6Block:NewFirstIP');
 				$sLabelOfAction2 = Dict::S('UI:IPManagement:Action:Shrink:IPv6Block:NewLastIP');
 
@@ -1584,6 +1503,9 @@ EOF
 				break;
 
 			case 'splitblock':
+				// Remind main attributes to user first
+				$this->DisplayMainAttributesForOperationV3($oP, $oColumn1);
+
 				$sLabelOfAction1 = Dict::S('UI:IPManagement:Action:Split:IPv6Block:At');
 				$sLabelOfAction2 = Dict::S('UI:IPManagement:Action:Split:IPv6Block:NameNewBlock');
 
@@ -1599,6 +1521,9 @@ EOF
 				break;
 
 			case 'expandblock':
+				// Remind main attributes to user first
+				$this->DisplayMainAttributesForOperationV3($oP, $oColumn1);
+
 				$sLabelOfAction1 = Dict::S('UI:IPManagement:Action:Expand:IPv6Block:NewFirstIP');
 				$sLabelOfAction2 = Dict::S('UI:IPManagement:Action:Expand:IPv6Block:NewLastIP');
 
@@ -1755,6 +1680,8 @@ EOF
 	 * @inheritdoc
 	 */
 	public function ComputeValues() {
+		parent::ComputeValues();
+
 		if ($this->IsNew()) {
 			// Preset LastIP to save the typing of too many 'f'
 			$oFirstIp = $this->Get('firstip');
@@ -2059,6 +1986,7 @@ EOF
 			if ($iPrefix >= IPV6_SUBNET_MAX_PREFIX) {
 				$aValues = array(
 					'org_id' => $iOrgId,
+					'ipconfig_id' => $this->Get('ipconfig_id'),
 					'requestor_id' => $this->Get('requestor_id'),
 					'block_id' => $iKey,
 					'ip' => $oFirstIp,

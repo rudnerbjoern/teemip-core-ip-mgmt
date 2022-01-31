@@ -7,8 +7,10 @@
 namespace TeemIp\TeemIp\Extension\Framework\Model;
 
 use cmdbAbstractObject;
+use CMDBObjectSet;
 use Combodo\iTop\Application\UI\Base\Component\Button\ButtonUIBlockFactory;
 use Combodo\iTop\Application\UI\Base\Component\Field\Field;
+use Combodo\iTop\Application\UI\Base\Component\Field\FieldUIBlockFactory;
 use Combodo\iTop\Application\UI\Base\Component\Form\FormUIBlockFactory;
 use Combodo\iTop\Application\UI\Base\Component\Input\InputUIBlockFactory;
 use Combodo\iTop\Application\UI\Base\Component\Toolbar\ToolbarUIBlockFactory;
@@ -17,10 +19,11 @@ use Combodo\iTop\Application\UI\Base\Layout\PageContent\PageContentFactory;
 use Combodo\iTop\Application\UI\Base\Layout\UIContentBlock;
 use DBObjectSearch;
 use Dict;
+use iTopWebPage;
 use MenuBlock;
 use MetaModel;
+use TeemIp\TeemIp\Extension\Framework\Helper\IPUtils;
 use utils;
-use WebPage;
 
 class _IPAbstractObject extends cmdbAbstractObject {
 	/**
@@ -73,18 +76,20 @@ class _IPAbstractObject extends cmdbAbstractObject {
 		return parent::GetAttributeFlags($sAttCode, $aReasons, $sTargetState);
 	}
 
-	/**
+	/*
 	 * Displays choices related to operation.
 	 *
-	 * @param \WebPage $oP
+	 * @param \iTopWebPage $oP
 	 * @param $oAppContext
 	 * @param $sOperation
-	 * @param array $aDefault
+	 * @param $aDefault
 	 *
+	 * @return void
+	 * @throws \ArchivedObjectException
 	 * @throws \CoreException
 	 * @throws \DictExceptionMissingString
 	 */
-	public function DisplayOperationForm(WebPage $oP, $oAppContext, $sOperation, $aDefault = array()) {
+	public function DisplayOperationForm(iTopWebPage $oP, $oAppContext, $sOperation, $aDefault = array()) {
 		$id = $this->GetKey();
 		$sClass = get_class($this);
 		$sClassLabel = MetaModel::GetName($sClass);
@@ -96,7 +101,7 @@ class _IPAbstractObject extends cmdbAbstractObject {
 			// Found issues: explain and display block again
 			$sIssueDesc = Dict::Format($sUIPath.':'.$CheckOperation);
 			cmdbAbstractObject::SetSessionMessage($sClass, $id, $sOperation, $sIssueDesc, 'error', 0, true /* must not exist */);
-			$this->DisplayDetails($oP);
+			IPUtils::DisplayDetails($oP, $this);
 
 			return;
 		}
@@ -116,7 +121,7 @@ class _IPAbstractObject extends cmdbAbstractObject {
 			$iTransactionId = utils::GetNewTransactionId();
 			$oP->SetTransactionId($iTransactionId);
 			$sFormAction = utils::GetAbsoluteUrlModulesRoot()."/teemip-ip-mgmt/ui.teemip-ip-mgmt.php";
-			$oP->add("<form action=\"$sFormAction\" id=\"form_{$m_iFormId}\" enctype=\"multipart/form-data\" method=\"post\" onSubmit=\"return OnSubmit('form_{$m_iFormId}');\">\n");
+			$oP->add("<form action=\"$sFormAction\" id=\"form_$m_iFormId\" enctype=\"multipart/form-data\" method=\"post\" onSubmit=\"return OnSubmit('form_$m_iFormId');\">\n");
 			$oP->add_ready_script("$(window).unload(function() { OnUnload('$iTransactionId') } );\n");
 
 			// Display object attributes as a reminder
@@ -128,10 +133,7 @@ class _IPAbstractObject extends cmdbAbstractObject {
 				// Display object attributes
 				$this->DisplayMainAttributesForOperation($oP, $sOperation, $m_iFormId, $sPrefix, $aDefault);
 
-				// Display tab for global parameters
-				$this->DisplayGlobalAttributesForOperation($oP, $aDefault);
-
-				$oP->SetCurrentTab('');
+				$oP->SetCurrentTab();
 			}
 
 			// Display action fields
@@ -160,11 +162,13 @@ EOF
 			);
 		} else {
 			// Prepare form
-			/** @var \iTopWebPage $oP */
-			$oP->set_title(Dict::Format($sUIPath.':PageTitle_Object_Class', $this->GetName()));
+			$sUITitle = Dict::Format($sUIPath.':PageTitle_Object_Class', $this->GetName(), $sClassLabel);
+			$oP->SetBreadCrumbEntry($sUITitle, $sUITitle, '', '', 'fas fa-wrench', iTopWebPage::ENUM_BREADCRUMB_ENTRY_ICON_TYPE_CSS_CLASSES);
+			$oP->set_title($sUITitle);
 
 			$iTransactionId = utils::GetNewTransactionId();
 			$oP->SetTransactionId($iTransactionId);
+			$this->GetNewFormId('');
 
 			$oP->SetContentLayout(PageContentFactory::MakeForObjectDetails($this, cmdbAbstractObject::ENUM_DISPLAY_MODE_VIEW));
 			$oContentBlock = new UIContentBlock();
@@ -180,7 +184,7 @@ EOF
 				->AddSubBlock(InputUIBlockFactory::MakeForHidden('transaction_id', $iTransactionId));
 
 			$oToolbarButtons = ToolbarUIBlockFactory::MakeStandard(null);
-			$oCancelButton = ButtonUIBlockFactory::MakeForCancel(Dict::S('UI:Button:Cancel'), 'cancel', 'cancel')->SetOnClickJsCode("BackToDetails('{$sClass}', '{$id}', '', '{null}');");
+			$oCancelButton = ButtonUIBlockFactory::MakeForCancel(Dict::S('UI:Button:Cancel'), 'cancel', 'cancel')->SetOnClickJsCode("BackToDetails('$sClass', '$id', '', '{null}');");
 			$oCancelButton->AddCSSClasses(['action', 'cancel']);
 			$oToolbarButtons->AddSubBlock($oCancelButton);
 			$oApplyButton = ButtonUIBlockFactory::MakeForPrimaryAction(Dict::S('UI:Button:Apply'), null, null, true);
@@ -294,7 +298,7 @@ EOF
 	/**
 	 * Set page titles.
 	 *
-	 * @param \WebPage $oP
+	 * @param \iTopWebPage $oP
 	 * @param $sUIPath
 	 * @param bool $bIcon
 	 *
@@ -302,7 +306,7 @@ EOF
 	 * @throws \CoreException
 	 * @throws \DictExceptionMissingString
 	 */
-	public function SetPageTitles(WebPage $oP, $sUIPath, $bIcon = true) {
+	public function SetPageTitles(iTopWebPage $oP, $sUIPath, $bIcon = true) {
 		$sClassLabel = MetaModel::GetName(get_class($this));
 		$oP->set_title(Dict::Format($sUIPath.':PageTitle_Object_Class', $this->GetName(), $sClassLabel));
 		$oP->add("<div class=\"page_header teemip_page_header\">\n");
@@ -328,26 +332,66 @@ EOF
 	}
 
 	/**
-	 * @param $oP
+	 * Remind main block attributes to user when performing resizing actions
+	 *
+	 * @param \iTopWebPage $oP
 	 * @param $sOperation
-	 * @param $m_iFormId
+	 * @param $iFormId
 	 * @param $sPrefix
 	 * @param $aDefault
+	 *
+	 * @return void
 	 */
-	protected function DisplayMainAttributesForOperation(WebPage $oP, $sOperation, $m_iFormId, $sPrefix, $aDefault) {
+	protected function DisplayMainAttributesForOperation(iTopWebPage $oP, $sOperation, $iFormId, $sPrefix, $aDefault) {
 	}
 
 	/**
-	 * @param $oP
-	 * @param $aDefault
+	 * Remind main block attributes to user when performing resizing actions - V >= 3.0
+	 *
+	 * @param \iTopWebPage $oP
+	 * @param $oColumn
+	 *
+	 * @return void
+	 * @throws \ArchivedObjectException
+	 * @throws \CoreException
+	 * @throws \CoreUnexpectedValue
+	 * @throws \MySQLException
+	 * @throws \OQLException
 	 */
-	protected function DisplayGlobalAttributesForOperation(WebPage $oP, $aDefault) {
+	protected function DisplayMainAttributesForOperationV3(iTopWebPage $oP, $oColumn) {
+		$sClass = get_class($this);
+
+		// Requestor - Allow change
+		$sAttCode = 'requestor_id';
+		$sLabel = MetaModel::GetLabel($sClass, $sAttCode);
+		$iOrgId = $this->Get('org_id');
+		$iRequestorId = $this->Get('requestor_id');
+		$oPersonSet = new CMDBObjectSet(DBObjectSearch::FromOQL("SELECT Person AS p WHERE p.org_id = :org_id"), array(), array('org_id' => $iOrgId));
+		$sInputId = $this->m_iFormId.'_'.$sAttCode;
+		$sHTML = "<select id=\"$sInputId\" name=\"attr_$sAttCode\">\n";
+		if ($iRequestorId == 0) {
+			$sHTML .= "<option selected='' value=0></option>\n";
+		} else {
+			$sHTML .= "<option value=0></option>\n";
+		}
+		while ($oPerson = $oPersonSet->Fetch()) {
+			$iPersonKey = $oPerson->GetKey();
+			$sPersonName = $oPerson->GetName();
+			if ($iPersonKey == $iRequestorId) {
+				$sHTML .= "<option selected='' value=\"$iPersonKey\">".$sPersonName."</option>\n";
+			} else {
+				$sHTML .= "<option value=\"$iPersonKey\">".$sPersonName."</option>\n";
+			}
+		}
+		$sHTML .= "</select>";
+		$val = $this->GetSimpleFieldForForm('AttributeExternalKey', 'requestor_id', $sLabel, $sHTML);
+		$oColumn->AddSubBlock(FieldUIBlockFactory::MakeFromParams($val));
 	}
 
 	/**
 	 * Display attributes associated to an operation
 	 *
-	 * @param \WebPage $oP
+	 * @param \iTopWebPage $oP
 	 * @param $sOperation
 	 * @param $iFormId
 	 * @param $aDefault
@@ -356,26 +400,24 @@ EOF
 	 * @throws \CoreException
 	 * @throws \DictExceptionMissingString
 	 */
-	protected function DisplayActionFieldsForOperation(WebPage $oP, $sOperation, $m_iFormId, $aDefault) {
+	protected function DisplayActionFieldsForOperation(iTopWebPage $oP, $sOperation, $iFormId, $aDefault) {
 	}
 
 	/**
-	 * Display attributes associated to operation
+	 * Display attributes associated to operation - V >= 3.0
 	 *
-	 * @param \WebPage $oP
+	 * @param \iTopWebPage $oP
+	 * @param $oClassForm
 	 * @param $sOperation
-	 * @param $iFormId
 	 * @param $aDefault
 	 *
-	 * @throws \ArchivedObjectException
-	 * @throws \CoreException
-	 * @throws \DictExceptionMissingString
+	 * @return void
 	 */
-	protected function DisplayActionFieldsForOperationV3(WebPage $oP, $oClassForm, $sOperation, $aDefault) {
+	protected function DisplayActionFieldsForOperationV3(iTopWebPage $oP, $oClassForm, $sOperation, $aDefault) {
 	}
 
 	/**
-	 * @param \WebPage $oP
+	 * @param \iTopWebPage $oP
 	 * @param string $sTitle
 	 *
 	 * @throws \ApplicationException
@@ -386,7 +428,7 @@ EOF
 	 * @throws \MySQLException
 	 * @throws \OQLException
 	 */
-	public function DisplayBareTab(WebPage $oP, $sTitle = '') {
+	public function DisplayBareTab(iTopWebPage $oP, $sTitle = '') {
 		$sClass = get_class($this);
 		if (version_compare(ITOP_DESIGN_LATEST_VERSION, '3.0', '<')) {
 			// Display action menu
@@ -399,14 +441,13 @@ EOF
 			$this->SetPageTitles($oP, $sTitle.$sClass);
 		} else {
 			// The object can be read - Process request now
-			/** @var \iTopWebPage $oP */
 			$sClassLabel = MetaModel::GetName($sClass);
 
 			$oP->set_title(Dict::Format('UI:DetailsPageTitle', $this->GetRawName(), $sClassLabel)); // Set title will take care of the encoding
 			$oP->SetContentLayout(PageContentFactory::MakeForObjectDetails($this, cmdbAbstractObject::ENUM_DISPLAY_MODE_VIEW));
 			$oObjectDetails = ObjectFactory::MakeDetails($this);
 
-			$aHeadersBlocks = $this->DisplayBareHeader($oP, false, cmdbAbstractObject::ENUM_DISPLAY_MODE_VIEW);
+			$aHeadersBlocks = $this->DisplayBareHeader($oP, false);
 			if (false === empty($aHeadersBlocks['subtitle'])) {
 				$oObjectDetails->AddSubTitleBlocks($aHeadersBlocks['subtitle']);
 			}
@@ -422,7 +463,9 @@ EOF
 	}
 
 	/**
-	 * @param \WebPage $oP
+	 * Create form content for a field that is an attribute in a class of object
+	 *
+	 * @param \iTopWebPage $oP
 	 * @param $sPrefix
 	 * @param $sClass
 	 * @param $sAttCode
@@ -443,7 +486,7 @@ EOF
 	 * @throws \Twig\Error\RuntimeError
 	 * @throws \Twig\Error\SyntaxError
 	 */
-	protected function GetClassFieldForForm(WebPage $oP, $sPrefix, $sClass, $sAttCode, $sLabel, $sDisplayValue, $iFlags) {
+	protected function GetClassFieldForForm(iTopWebPage $oP, $sPrefix, $sClass, $sAttCode, $sLabel, $sDisplayValue, $iFlags) {
 		$oAttDef = MetaModel::GetAttributeDef($sClass, $sAttCode);
 		$sAttDefClass = get_class($oAttDef);
 		$sAttLabel = ($sLabel == '') ? MetaModel::GetLabel($sClass, $sAttCode) : $sLabel;
@@ -484,6 +527,8 @@ EOF
 	}
 
 	/**
+	 * Create form content for a simple field i.e. a field that is NOT an attribute in a class of object
+	 *
 	 * @param $sAttDefClass
 	 * @param $sAttCode
 	 * @param $sLabel
@@ -519,6 +564,16 @@ EOF
 		return $val;
 	}
 
+	/**
+	 * Create display content for a field that is an attribute in a class of object
+	 *
+	 * @param $sClass
+	 * @param $sAttCode
+	 * @param $sStateAttCode
+	 *
+	 * @return array|null
+	 * @throws \Exception
+	 */
 	protected function GetClassFieldForDisplay($sClass, $sAttCode, $sStateAttCode) {
 		$oAttDef = MetaModel::GetAttributeDef($sClass, $sAttCode);
 		$sAttDefClass = get_class($oAttDef);

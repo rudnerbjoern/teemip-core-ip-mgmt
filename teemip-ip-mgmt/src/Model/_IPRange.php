@@ -9,6 +9,7 @@ namespace TeemIp\TeemIp\Extension\IPManagement\Model;
 use Dict;
 use IPConfig;
 use IPObject;
+use iTopWebPage;
 use utils;
 use WebPage;
 
@@ -182,21 +183,6 @@ class _IPRange extends IPObject {
 	/**
 	 * @inheritdoc
 	 */
-	public function ComputeValues() {
-		parent::ComputeValues();
-
-		if ($this->IsNew()) {
-			// Ugly workaround to not display the ipconfig_id parameter as it is not needed for that class !
-			$iOrgId = $this->Get('org_id');
-			if ($iOrgId != '') {
-				$this->Set('ipconfig_id', $iOrgId);
-			}
-		}
-	}
-
-	/**
-	 * @inheritdoc
-	 */
 	public function DoCheckToWrite() {
 		parent::DoCheckToWrite();
 
@@ -211,7 +197,8 @@ class _IPRange extends IPObject {
 	}
 
 	/**
-	 * @param \WebPage $oP
+	 * @param \iTopWebPage $oP
+	 * @param $aParam
 	 *
 	 * @throws \ApplicationException
 	 * @throws \ArchivedObjectException
@@ -221,7 +208,7 @@ class _IPRange extends IPObject {
 	 * @throws \MySQLException
 	 * @throws \OQLException
 	 */
-	public function DoListIps(WebPage $oP, $aParam) {
+	public function DoListIps(iTopWebPage $oP, $aParam) {
 		$this->DisplayBareTab($oP, 'UI:IPManagement:Action:ListIps:');
 		$oP->add($this->GetListIps($oP, $aParam));
 	}
@@ -247,10 +234,18 @@ class _IPRange extends IPObject {
 	}
 
 	/**
-	 * @param \WebPage $oP
+	 * @param \iTopWebPage $oP
 	 * @param $aParam
+	 *
+	 * @throws \ApplicationException
+	 * @throws \ArchivedObjectException
+	 * @throws \CoreException
+	 * @throws \CoreUnexpectedValue
+	 * @throws \DictExceptionMissingString
+	 * @throws \MySQLException
+	 * @throws \OQLException
 	 */
-	public function DisplayIPsAsCSV(WebPage $oP, $aParam) {
+	public function DisplayIPsAsCSV(iTopWebPage $oP, $aParam) {
 		$this->DisplayBareTab($oP, 'UI:IPManagement:Action:CsvExportIps:');
 		$sHtml = $this->GetIPsAsCSV($aParam);
 		if (version_compare(ITOP_DESIGN_LATEST_VERSION, '3.0', '<')) {
