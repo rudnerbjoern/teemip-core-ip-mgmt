@@ -6,7 +6,7 @@
 
 SetupWebPage::AddModule(
 	__FILE__, // Path to the current file, all other file names are relative to the directory containing this file
-	'teemip-ipv6-mgmt/3.0.0',
+	'teemip-ipv6-mgmt/3.0.1',
 	array(
 		// Identification
 		//
@@ -16,7 +16,7 @@ SetupWebPage::AddModule(
 		// Setup
 		//
 		'dependencies' => array(
-			'teemip-ip-mgmt/3.0.0',
+			'teemip-ip-mgmt/3.0.1',
 		),
 		'mandatory' => false,
 		'visible' => true,
@@ -33,12 +33,12 @@ SetupWebPage::AddModule(
 			//'data.struct.IPAudit.xml',
 		),
 		'data.sample' => array(
-			'data.sample.IPv6Block.xml',
-			'data.sample.IPv6Subnet.xml',
-			'data.sample.IPv6Range.xml',
-			'data.sample.IPv6Address.xml',
-			'data.sample.lnkIPv6BlockToLocation.xml',
-			'data.sample.lnkIPv6SubnetToLocation.xml',
+			'data/data.sample.IPv6Block.xml',
+			'data/data.sample.IPv6Subnet.xml',
+			'data/data.sample.IPv6Range.xml',
+			'data/data.sample.IPv6Address.xml',
+			'data/data.sample.lnkIPv6BlockToLocation.xml',
+			'data/data.sample.lnkIPv6SubnetToLocation.xml',
 		),
 		
 		// Documentation

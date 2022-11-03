@@ -37,7 +37,7 @@ class _IPv6Range extends IPRange {
 	 */
 	public function GetMultiSizeIcon($bImgTag = true, $bXsIcon = false) {
 		if ($bXsIcon) {
-			$sIcon = utils::GetAbsoluteUrlModulesRoot().'teemip-ipv6-mgmt/asset/img/ipv6range-xs.png';
+			$sIcon = utils::GetAbsoluteUrlModulesRoot().'teemip-ipv6-mgmt/asset/img/icons8-slicev6-16.png';
 
 			return ("<img src=\"$sIcon\" style=\"vertical-align:middle;\" alt=\"\"/>");
 		}
@@ -408,6 +408,29 @@ EOF
 	}
 
 	/**
+	 * @inheritDoc
+	 */
+	public function DoCheckToExplodeFQDN($sFqdnAttr) {
+		if (!in_array($sFqdnAttr, MetaModel::GetAttributesList('IPv6Address'))) {
+			// $sFqdnAttr is not a valid attribute for the class
+			return (Dict::Format('UI:IPManagement:Action:ExplodeFQDN:IPAddress:FQDNAttributeDoesNotExist', $sFqdnAttr));
+		}
+
+		return '';
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function DoExplodeFQDN($sFqdnAttr) {
+		$iKey = $this->GetKey();
+		$oIPsSet = new CMDBObjectSet(DBObjectSearch::FromOQL("SELECT IPv6Address WHERE $sFqdnAttr != '' AND $sFqdnAttr != fqdn AND range_id = :key"), array(), array('key' => $iKey));
+		while ($oIP = $oIPsSet->Fetch()) {
+			$oIP->DoExplodeFQDN($sFqdnAttr);
+		}
+	}
+
+	/**
 	 * @inheritdoc
 	 */
 	protected function DisplayActionFieldsForOperation(iTopWebPage $oP, $sOperation, $iFormId, $aDefault) {
@@ -468,7 +491,7 @@ EOF
 	/**
 	 * @inheritdoc
 	 */
-	protected function DisplayActionFieldsForOperationV3(iTopWebPage $oP, $oClassForm, $sOperation, $aDefault) {
+	protected function DisplayActionFieldsForOperationV3(iTopWebPage $oP, $oObjectDetails, $sOperation, $aDefault) {
 		$oMultiColumn = new MultiColumn();
 		$oP->AddUIBlock($oMultiColumn);
 
@@ -707,10 +730,13 @@ EOF
 	 * @inheritdoc
 	 */
 	public function GetAttributeFlags($sAttCode, &$aReasons = array(), $sTargetState = '') {
-		if ((!$this->IsNew()) && ($sAttCode == 'subnet_id')) {
-			return OPT_ATT_READONLY;
+		$sFlagsFromParent = parent::GetAttributeFlags($sAttCode, $aReasons, $sTargetState);
+		$aReadOnlyAttributes = array('subnet_id');
+
+		if (!$this->IsNew() && in_array($sAttCode, $aReadOnlyAttributes)) {
+			return (OPT_ATT_READONLY | $sFlagsFromParent);
 		}
 
-		return parent::GetAttributeFlags($sAttCode, $aReasons, $sTargetState);
+		return $sFlagsFromParent;
 	}
 }

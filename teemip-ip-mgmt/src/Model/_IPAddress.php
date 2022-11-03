@@ -672,15 +672,25 @@ class _IPAddress extends IPObject {
 		}
 		$sFqdn = $this->Get($sFqdnAttr);
 		if ($sFqdn == '') {
-			// Don't count empty string as error
-			return '';
+			// Discovered FQDN is empty
+			return (Dict::S('UI:IPManagement:Action:ExplodeFQDN:IPAddress:FQDNAttributeIsEmpty'));
 		}
-		list($sError, $iDomainId) = Domain::GetDomainFromFqdn($sFqdn, $this->Get('org_id'));
+		if (strcmp($sFqdn, $this->Get('fqdn')) === 0) {
+			// Discovered FQDN and current FQDN are the same
+			return (Dict::S('UI:IPManagement:Action:ExplodeFQDN:IPAddress:FQDNAttributeIsIdenticalToFQDN'));
+		}
+		list($sError, $iDomainId, $sDomainName) = Domain::GetDomainFromFqdn($sFqdn, $this->Get('org_id'));
 		if ($sError != '') {
 			return $sError;
 		}
-
-		return '';
+		// Check hostname computed from domain is compatible with hostname format
+		$sHostname = substr_replace($sFqdn, '', -strlen('.'.$sDomainName));
+		$sValidationPattern = MetaModel::GetAttributeDef($sClass, 'short_name')->GetValidationPattern();
+		if (preg_match('/'.$sValidationPattern.'/', $sHostname)) {
+			return '';
+		} else {
+			return (Dict::Format('UI:IPManagement:Action:ExplodeFQDN:IPAddress:HostnameFormatIsNotCorrect', $sHostname));
+		}
 	}
 
 	/**
@@ -696,15 +706,18 @@ class _IPAddress extends IPObject {
 	 */
 	public function DoExplodeFQDN($sFqdnAttr) {
 		$sFqdn = $this->Get($sFqdnAttr);
-		list($sError, $iDomainId) = Domain::GetDomainFromFqdn($sFqdn, $this->Get('org_id'));
-		if ($sError == '') {
-			$oDomain = MetaModel::GetObject('Domain', $iDomainId);
-			if ($oDomain != null) {
-				$sDomainName = $oDomain->Get('name');
+		// If discovered FQDN is empty or equal to current FQDN, do nothing
+		if (($sFqdn != '') && (strcmp($sFqdn, $this->Get('fqdn')) !== 0)) {
+			list($sError, $iDomainId, $sDomainName) = Domain::GetDomainFromFqdn($sFqdn, $this->Get('org_id'));
+			if ($sError == '') {
+				$sClass = get_class($this);
 				$sHostname = substr_replace($sFqdn, '', -strlen('.'.$sDomainName));
-				$this->Set('short_name', $sHostname);
-				$this->Set('domain_id', $iDomainId);
-				$this > $this->DBUpdate();
+				$sValidationPattern = MetaModel::GetAttributeDef($sClass, 'short_name')->GetValidationPattern();
+				if (preg_match('/'.$sValidationPattern.'/', $sHostname)) {
+					$this->Set('short_name', $sHostname);
+					$this->Set('domain_id', $iDomainId);
+					$this->DBUpdate();
+				}
 			}
 		}
 	}
@@ -760,6 +773,8 @@ class _IPAddress extends IPObject {
 	 * @inheritdoc
 	 */
 	public function GetAttributeFlags($sAttCode, &$aReasons = array(), $sTargetState = '') {
+		$sFlagsFromParent = parent::GetAttributeFlags($sAttCode, $aReasons, $sTargetState);
+
 		switch ($sAttCode) {
 			case 'org_id':
 			case 'fqdn':
@@ -768,18 +783,21 @@ class _IPAddress extends IPObject {
 			case 'responds_to_iplookup':
 			case 'fqdn_from_iplookup':
 			case 'responds_to_scan':
-				return OPT_ATT_READONLY;
+				return (OPT_ATT_READONLY | $sFlagsFromParent);
 
 			default:
 				break;
 		}
-		return parent::GetAttributeFlags($sAttCode, $aReasons, $sTargetState);
+
+		return $sFlagsFromParent;
 	}
 
 	/**
 	 * @inheritdoc
 	 */
 	public function GetInitialStateAttributeFlags($sAttCode, &$aReasons = array()) {
+		$sFlagsFromParent = parent::GetInitialStateAttributeFlags($sAttCode, $aReasons);
+
 		switch ($sAttCode) {
 			case 'fqdn':
 			case 'last_discovery_date':
@@ -787,13 +805,13 @@ class _IPAddress extends IPObject {
 			case 'responds_to_iplookup':
 			case 'fqdn_from_iplookup':
 			case 'responds_to_scan':
-				return OPT_ATT_READONLY;
+				return (OPT_ATT_READONLY | $sFlagsFromParent);
 
 			default:
 				break;
 		}
 
-		return parent::GetInitialStateAttributeFlags($sAttCode, $aReasons);
+		return $sFlagsFromParent;
 	}
 
 	/**
@@ -1002,7 +1020,7 @@ EOF
 	/**
 	 * @inheritdoc
 	 */
-	protected function DisplayActionFieldsForOperationV3(iTopWebPage $oP, $oClassForm, $sOperation, $aDefault) {
+	protected function DisplayActionFieldsForOperationV3(iTopWebPage $oP, $oObjectDetails, $sOperation, $aDefault) {
 		$oMultiColumn = new MultiColumn();
 		$oP->AddUIBlock($oMultiColumn);
 
@@ -1024,7 +1042,7 @@ EOF
 				$aCIClassesWithIp = IPAddress::GetListOfClassesWIthIP('leaf');
 
 				// Target Class
-				$iFormId = $oClassForm->GetId();
+				$iFormId = $oObjectDetails->GetId();
 				$sClassInputId = 'field_'.$iFormId.'_ciclass';
 				$oColumn1->AddSubBlock(HtmlFactory::MakeParagraph($sLabelOfAction1));
 				$oColumn1->AddSubBlock(HtmlFactory::MakeRaw('<br>'));

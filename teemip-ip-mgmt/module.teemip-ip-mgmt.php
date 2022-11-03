@@ -6,7 +6,7 @@
 
 SetupWebPage::AddModule(
 	__FILE__, // Path to the current file, all other file names are relative to the directory containing this file
-	'teemip-ip-mgmt/3.0.0',
+	'teemip-ip-mgmt/3.0.1',
 	array(
 		// Identification
 		//
@@ -17,8 +17,8 @@ SetupWebPage::AddModule(
 		//
 		'dependencies' => array(
 			'itop-tickets/2.7.0',
-			'teemip-framework/3.0.0',
-			'teemip-network-mgmt/3.0.0',
+			'teemip-framework/3.0.1',
+			'teemip-network-mgmt/3.0.1',
 		),
 		'mandatory' => false,
 		'visible' => true,
@@ -32,23 +32,25 @@ SetupWebPage::AddModule(
 			'src/Hook/AllocateIPsToProductionCIs.php',
 			'src/Hook/ReleaseIPsFromObsoleteCIs.php',
 			'src/Hook/UnassignIPsWithNoCI.php',
+			'src/Hook/HandleIPWaterMarks.php',
+			'src/Model/IPTriggerOnWaterMark.php',
 			'model.teemip-ip-mgmt.php',
 		),
 		'data.struct' => array(
 			//'data.struct.IPAudit.xml',
 		),
 		'data.sample' => array(
-			'data.sample.IPGlue.xml',
-			'data.sample.IPConfig.xml',
-			'data.sample.IPBlockType.xml',
-			'data.sample.IPRangeUsage.xml',
-			'data.sample.IPUsage.xml',
-			'data.sample.IPv4Block.xml',
-			'data.sample.IPv4Subnet.xml',
-			'data.sample.IPv4Range.xml',
-			'data.sample.IPv4Address.xml',
-			'data.sample.lnkIPv4BlockToLocation.xml',
-			'data.sample.lnkIPv4SubnetToLocation.xml',
+			'data/data.sample.IPGlue.xml',
+			'data/data.sample.IPConfig.xml',
+			'data/data.sample.IPBlockType.xml',
+			'data/data.sample.IPRangeUsage.xml',
+			'data/data.sample.IPUsage.xml',
+			'data/data.sample.IPv4Block.xml',
+			'data/data.sample.IPv4Subnet.xml',
+			'data/data.sample.IPv4Range.xml',
+			'data/data.sample.IPv4Address.xml',
+			'data/data.sample.lnkIPv4BlockToLocation.xml',
+			'data/data.sample.lnkIPv4SubnetToLocation.xml',
 		),
 		
 		// Documentation
@@ -70,6 +72,18 @@ SetupWebPage::AddModule(
 				'debug' => false,
 				'periodicity' => 3600,
 				'status_list' => array('implementation', 'production'),
+			),
+			'ip_unassign_on_no_ci' => array(
+				'enabled' => false,
+				'debug' => false,
+				'periodicity' => 3600,
+				'target_status' => 'unassigned',
+			),
+			'handle_ip_watermarks' => array(
+				'enabled' => false,
+				'debug' => false,
+				'periodicity' => 86400,
+				'target_classes' => array('IPv4Subnet', 'IPv4Range'),
 			),
 		),
 	)
@@ -111,6 +125,10 @@ if (!class_exists('IPManagementInstaller'))
 		 */
 		public static function AfterDatabaseCreation(Config $oConfiguration, $sPreviousVersion, $sCurrentVersion)
 		{
+			if ($sPreviousVersion === '') {
+				return;
+			}
+
 			$sDBSubname = $oConfiguration->Get('db_subname');
 			if (($sPreviousVersion == '2.5.0') || ($sPreviousVersion == '2.5.1')) {
 				SetupLog::Info("Module teemip-ip-mgmt: reset next_run_date of ReleaseIPsFromObsoleteCIs backgorund task");
@@ -128,14 +146,14 @@ if (!class_exists('IPManagementInstaller'))
 
 				SetupLog::Info("Module teemip-ip-mgmt: migration done");
 			}
-//			if ($sPreviousVersion[0] == '2') {
-			SetupLog::Info("Module teemip-ip-mgmt: compute new IPObjects attributes linked with IPConfig parameters ");
+			if ($sPreviousVersion[0] == '2') {
+				SetupLog::Info("Module teemip-ip-mgmt: compute new IPObjects attributes linked with IPConfig parameters ");
 
-			$sCopy = "UPDATE ".$sDBSubname."ipobject AS o JOIN ipconfig AS c ON c.org_id = o.org_id SET o.ipconfig_id = c.id";
-			CMDBSource::Query($sCopy);
+				$sCopy = "UPDATE ".$sDBSubname."ipobject AS o JOIN ipconfig AS c ON c.org_id = o.org_id SET o.ipconfig_id = c.id";
+				CMDBSource::Query($sCopy);
 
-			SetupLog::Info("Module teemip-ip-mgmt: computation done");
-//			}
+				SetupLog::Info("Module teemip-ip-mgmt: computation done");
+			}
 		}
 	}
 }

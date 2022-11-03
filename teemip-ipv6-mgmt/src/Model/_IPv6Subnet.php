@@ -42,7 +42,7 @@ class _IPv6Subnet extends IPSubnet implements iTree {
 	 */
 	public function GetMultiSizeIcon($bImgTag = true, $bXsIcon = false) {
 		if ($bXsIcon) {
-			$sIcon = utils::GetAbsoluteUrlModulesRoot().'teemip-ipv6-mgmt/asset/img/ipv6subnet-xs.png';
+			$sIcon = utils::GetAbsoluteUrlModulesRoot().'teemip-ipv6-mgmt/asset/img/icons8-subnetv6-16.png';
 
 			return ("<img src=\"$sIcon\" style=\"vertical-align:middle;\" alt=\"\"/>");
 		}
@@ -799,6 +799,29 @@ EOF
 	}
 
 	/**
+	 * @inheritDoc
+	 */
+	public function DoCheckToExplodeFQDN($sFqdnAttr) {
+		if (!in_array($sFqdnAttr, MetaModel::GetAttributesList('IPv6Address'))) {
+			// $sFqdnAttr is not a valid attribute for the class
+			return (Dict::Format('UI:IPManagement:Action:ExplodeFQDN:IPAddress:FQDNAttributeDoesNotExist', $sFqdnAttr));
+		}
+
+		return '';
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function DoExplodeFQDN($sFqdnAttr) {
+		$iKey = $this->GetKey();
+		$oIPsSet = new CMDBObjectSet(DBObjectSearch::FromOQL("SELECT IPv6Address WHERE $sFqdnAttr != '' AND $sFqdnAttr != fqdn AND subnet_id = :key"), array(), array('key' => $iKey));
+		while ($oIP = $oIPsSet->Fetch()) {
+			$oIP->DoExplodeFQDN($sFqdnAttr);
+		}
+	}
+
+	/**
 	 * Display subnet in the node of a hierarchical tree
 	 *
 	 * @return string
@@ -949,7 +972,7 @@ EOF
 	/**
 	 * @inheritdoc
 	 */
-	protected function DisplayActionFieldsForOperationV3(iTopWebPage $oP, $oClassForm, $sOperation, $aDefault) {
+	protected function DisplayActionFieldsForOperationV3(iTopWebPage $oP, $oObjectDetails, $sOperation, $aDefault) {
 		$oMultiColumn = new MultiColumn();
 		$oP->AddUIBlock($oMultiColumn);
 
@@ -1703,6 +1726,8 @@ EOF
 	 * @inheritDoc
 	 */
 	public function GetInitialStateAttributeFlags($sAttCode, &$aReasons = array()) {
+		$sFlagsFromParent = parent::GetInitialStateAttributeFlags($sAttCode, $aReasons);
+
 		switch ($sAttCode) {
 			case 'gatewayip':
 				$iOrgId = $this->Get('org_id');
@@ -1711,7 +1736,7 @@ EOF
 					$sGatewayIPFormat = IPConfig::GetFromGlobalIPConfig('ipv6_gateway_ip_format', $iOrgId);
 				}
 				if ($sGatewayIPFormat != 'free_setup') {
-					return OPT_ATT_READONLY;
+					return (OPT_ATT_READONLY | $sFlagsFromParent);
 				}
 				break;
 
@@ -1719,13 +1744,15 @@ EOF
 				break;
 		}
 
-		return parent::GetInitialStateAttributeFlags($sAttCode, $aReasons);
+		return $sFlagsFromParent;
 	}
 
 	/**
 	 * @inheritdoc
 	 */
 	public function GetAttributeFlags($sAttCode, &$aReasons = array(), $sTargetState = '') {
+		$sFlagsFromParent = parent::GetAttributeFlags($sAttCode, $aReasons, $sTargetState);
+
 		switch ($sAttCode) {
 			case 'org_id':
 			case 'block_id':
@@ -1735,7 +1762,7 @@ EOF
 			case 'ip_occupancy':
 			case 'range_occupancy':
 			case 'ipv6_gateway_ip_format':
-				return OPT_ATT_READONLY;
+				return (OPT_ATT_READONLY | $sFlagsFromParent);
 
 			case 'gatewayip':
 				$iOrgId = $this->Get('org_id');
@@ -1744,7 +1771,7 @@ EOF
 					$sGatewayIPFormat = IPConfig::GetFromGlobalIPConfig('ipv6_gateway_ip_format', $iOrgId);
 				}
 				if ($sGatewayIPFormat != 'free_setup') {
-					return OPT_ATT_READONLY;
+					return (OPT_ATT_READONLY | $sFlagsFromParent);
 				}
 				break;
 
@@ -1752,7 +1779,7 @@ EOF
 				break;
 		}
 
-		return parent::GetAttributeFlags($sAttCode, $aReasons, $sTargetState);
+		return $sFlagsFromParent;
 	}
 
 	/**

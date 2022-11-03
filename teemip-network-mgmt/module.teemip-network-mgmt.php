@@ -6,7 +6,7 @@
 
 SetupWebPage::AddModule(
 	__FILE__, // Path to the current file, all other file names are relative to the directory containing this file
-	'teemip-network-mgmt/3.0.0',
+	'teemip-network-mgmt/3.0.1',
 	array(
 		// Identification
 		//
@@ -16,7 +16,7 @@ SetupWebPage::AddModule(
 		// Setup
 		//
 		'dependencies' => array(
-			'teemip-framework/3.0.0',
+			'teemip-framework/3.0.1',
 		),
 		'mandatory' => false,
 		'visible' => true,
@@ -31,7 +31,7 @@ SetupWebPage::AddModule(
 			//'data.struct.IPAudit.xml',
 		),
 		'data.sample' => array(
-			'data.sample.Domain.xml',
+			'data/data.sample.Domain.xml',
 		),
 		
 		// Documentation

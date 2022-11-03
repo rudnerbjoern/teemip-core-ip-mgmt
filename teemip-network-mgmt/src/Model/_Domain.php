@@ -81,19 +81,20 @@ class _Domain extends DNSObject implements iTree {
 	static function GetDomainFromFqdn($sFqdn, $iOrgId) {
 		$sError = '';
 		if ((strlen($sFqdn) == 0) || ($iOrgId == 0)) {
-			return array(Dict::Format('UI:IPManagement:Action:ExplodeFQDN:Domain:Error:CannotFindDomain'), 0);
+			return array(Dict::Format('UI:IPManagement:Action:ExplodeFQDN:Domain:Error:CannotFindDomain'), 0, '');
 		}
 		$sOQL = "SELECT Domain WHERE org_id = :org_id AND name = :name";
 		$oDomainSet = new CMDBObjectSet(DBObjectSearch::FromOQL($sOQL), array(), array('org_id' => $iOrgId, 'name' => $sFqdn));
 		if ($oDomain = $oDomainSet->Fetch()) {
-			$iZoneId = $oDomain->GetKey();
+			$iDomainId = $oDomain->GetKey();
+			$sDomainName = $oDomain->Get('name');
 		} else {
 			$i = strpos($sFqdn, '.');
 			$sNextFqdn = substr($sFqdn, $i + 1);
-			list($sError, $iZoneId) = static::GetDomainFromFqdn($sNextFqdn, $iOrgId);
+			list($sError, $iDomainId, $sDomainName) = static::GetDomainFromFqdn($sNextFqdn, $iOrgId);
 		}
 
-		return array($sError, $iZoneId);
+		return array($sError, $iDomainId, $sDomainName);
 	}
 
 	/**
@@ -232,7 +233,7 @@ class _Domain extends DNSObject implements iTree {
 		$sDomain = $this->Get('name');
 
 		// If organization is changing, make sure domain has no host, no child domain and no associated zone.
-		if ($sOrgId != $sOriginalOrgId) {
+		if (!is_null($sOriginalOrgId) && ($sOrgId != $sOriginalOrgId)) {
 			$sOQL = "SELECT Domain AS d WHERE d.parent_id = :key";
 			$oChildDomainSet = new CMDBObjectSet(DBObjectSearch::FromOQL($sOQL), array(), array('key' => $iKey));
 			if ($oChildDomainSet->CountExceeds(0)) {
@@ -445,38 +446,31 @@ class _Domain extends DNSObject implements iTree {
 	}
 
 	/**
-	 * Change default flag of attribute.
-	 *
-	 * @param $sAttCode
-	 * @param array $aReasons
-	 *
-	 * @return bool|int
-	 * @throws \CoreException
+	 * @inheritdoc
 	 */
 	public function GetInitialStateAttributeFlags($sAttCode, &$aReasons = array()) {
+		$sFlagsFromParent = parent::GetInitialStateAttributeFlags($sAttCode, $aReasons);
 		$aHiddenAndReadOnlyAttributes = array('parent_org_id');
+
 		if (in_array($sAttCode, $aHiddenAndReadOnlyAttributes)) {
-			return OPT_ATT_HIDDEN || OPT_ATT_READONLY;
+			return (OPT_ATT_HIDDEN | OPT_ATT_READONLY | $sFlagsFromParent);
 		}
 
-		return parent::GetInitialStateAttributeFlags($sAttCode, $aReasons);
+		return $sFlagsFromParent;
 	}
 
 	/**
-	 * @param string $sAttCode
-	 * @param array $aReasons
-	 * @param string $sTargetState
-	 *
-	 * @return int
-	 * @throws \CoreException
+	 * @inheritdoc
 	 */
 	public function GetAttributeFlags($sAttCode, &$aReasons = array(), $sTargetState = '') {
+		$sFlagsFromParent = parent::GetAttributeFlags($sAttCode, $aReasons, $sTargetState);
 		$aReadOnlyAttributes = array('parent_org_id', 'parent_id');
+
 		if (in_array($sAttCode, $aReadOnlyAttributes)) {
-			return OPT_ATT_READONLY;
+			return (OPT_ATT_READONLY | $sFlagsFromParent);
 		}
 
-		return parent::GetAttributeFlags($sAttCode, $aReasons, $sTargetState);
+		return $sFlagsFromParent;
 	}
 
 	/**
@@ -530,18 +524,7 @@ class _Domain extends DNSObject implements iTree {
 	}
 
 	/**
-	 * Display attributes associated to an operation for V < 3.0
-	 *
-	 * @param \WebPage $oP
-	 * @param $sOperation
-	 * @param $iFormId
-	 * @param $aDefault
-	 *
-	 * @throws \ArchivedObjectException
-	 * @throws \CoreException
-	 * @throws \CoreUnexpectedValue
-	 * @throws \MySQLException
-	 * @throws \OQLException
+	 * @inheritdoc
 	 */
 	protected function DisplayActionFieldsForOperation(iTopWebPage $oP, $sOperation, $iFormId, $aDefault) {
 		$oP->add("<table>");
@@ -599,26 +582,9 @@ class _Domain extends DNSObject implements iTree {
 	}
 
 	/**
-	 * Display attributes associated to an operation for V >= 3.0
-	 *
-	 * @param \WebPage $oP
-	 * @param $oClassForm
-	 * @param $sOperation
-	 * @param $aDefault
-	 *
-	 * @throws \ArchivedObjectException
-	 * @throws \ConfigException
-	 * @throws \CoreException
-	 * @throws \CoreUnexpectedValue
-	 * @throws \DictExceptionMissingString
-	 * @throws \MySQLException
-	 * @throws \OQLException
-	 * @throws \ReflectionException
-	 * @throws \Twig\Error\LoaderError
-	 * @throws \Twig\Error\RuntimeError
-	 * @throws \Twig\Error\SyntaxError
+	 * @inheritdoc
 	 */
-	protected function DisplayActionFieldsForOperationV3(iTopWebPage $oP, $oClassForm, $sOperation, $aDefault) {
+	protected function DisplayActionFieldsForOperationV3(iTopWebPage $oP, $oObjectDetails, $sOperation, $aDefault) {
 		$oMultiColumn = new MultiColumn();
 		$oP->AddUIBlock($oMultiColumn);
 

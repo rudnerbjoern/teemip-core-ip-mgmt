@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<itop_design xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.7">
+<itop_design xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="3.0">
   <classes>
     <class id="FunctionalCI" _delta="must_exist">
       <methods>
@@ -169,8 +169,22 @@
       <fields>
         <field id="operational_status" xsi:type="AttributeMetaEnum" _delta="define">
           <values>
-            <value id="active">active</value>
-            <value id="inactive">inactive</value>
+            <value id="active">
+              <code>active</code>
+							<style>
+								<main_color>hsla(92, 47.9%, 42.2%, 1)</main_color>
+								<complementary_color>hsla(0, 0%, 100%, 1)</complementary_color>
+								<decoration_classes/>
+							</style>
+            </value>
+            <value id="inactive">
+              <code>inactive</code>
+							<style>
+								<main_color>hsla(33, 89.9%, 64.9%, 1)</main_color>
+								<complementary_color>hsla(0, 0%, 100%, 1)</complementary_color>
+								<decoration_classes/>
+							</style>
+            </value>
           </values>
           <sql>operational_status</sql>
           <default_value>active</default_value>
@@ -340,10 +354,38 @@
       <fields>
         <field id="status" xsi:type="AttributeEnum" _delta="define">
           <values>
-            <value id="stock">stock</value>
-            <value id="active">active</value>
-            <value id="inactive">inactive</value>
-            <value id="obsolete">obsolete</value>
+            <value id="stock">
+              <code>stock</code>
+              <style>
+                <main_color>hsla(207, 72.6%, 57.1%, 1)</main_color>
+                <complementary_color>hsla(0, 0%, 100%, 1)</complementary_color>
+                <decoration_classes/>
+              </style>
+            </value>
+            <value id="active">
+              <code>active</code>
+							<style>
+								<main_color>hsla(92, 47.9%, 42.2%, 1)</main_color>
+								<complementary_color>hsla(0, 0%, 100%, 1)</complementary_color>
+								<decoration_classes/>
+							</style>
+            </value>
+            <value id="inactive">
+              <code>inactive</code>
+							<style>
+								<main_color>hsla(33, 89.9%, 64.9%, 1)</main_color>
+								<complementary_color>hsla(0, 0%, 100%, 1)</complementary_color>
+								<decoration_classes/>
+							</style>
+            </value>
+            <value id="obsolete">
+              <code>obsolete</code>
+              <style>
+                <main_color>hsla(0, 60.8%, 48%, 1)</main_color>
+                <complementary_color>hsla(0, 0%, 100%, 1)</complementary_color>
+                <decoration_classes/>
+              </style>
+            </value>
           </values>
           <sql>status</sql>
           <default_value>active</default_value>
@@ -482,11 +524,11 @@ class TeemIpConfigMgmtAdaptor implements iApplicationUIExtension, iApplicationOb
 	 * @inheritdoc
 	 */
 	public function OnDisplayRelations($oObject, WebPage $oPage, $bEditMode = false) {
-		if ($oObject instanceof ConnectableCI) {
-	        if (!$bEditMode) {
-	            $sOQL = "SELECT lnkIPInterfaceToIPAddress AS l JOIN PhysicalInterface AS int ON l.ipinterface_id = int.id JOIN ConnectableCI AS c ON int.connectableci_id = c.id WHERE c.id = :ci_id";
+		if (!$bEditMode) {
+			if ($oObject instanceof ConnectableCI) {
+				$sOQL = "SELECT lnkIPInterfaceToIPAddress AS l JOIN PhysicalInterface AS int ON l.ipinterface_id = int.id JOIN ConnectableCI AS c ON int.connectableci_id = c.id WHERE c.id = :ci_id";
 	            $sDisplayClass = 'ConnectableCI';
-	            if($oObject->Get('finalclass') == 'NetworkDevice') {
+	            if ($oObject->Get('finalclass') == 'NetworkDevice') {
 	                $sOQL .= " UNION SELECT lnkIPInterfaceToIPAddress AS l1 JOIN NetworkDeviceVirtualInterface AS int ON l1.ipinterface_id = int.id JOIN NetworkDevice AS n ON int.networkdevice_id = n.id WHERE n.id = :ci_id";
 	                $sDisplayClass = 'NetworkDevice';
 	            } elseif($oObject->Get('finalclass') == 'Server')
@@ -505,13 +547,11 @@ class TeemIpConfigMgmtAdaptor implements iApplicationUIExtension, iApplicationOb
 	                $oPage->SetCurrentTab(Dict::S('Class:'.$sDisplayClass.'/Tab:ipaddresses_list'));
 	                $oPage->p(MetaModel::GetClassIcon('IPAddress').'&nbsp;'.Dict::S('UI:NoObjectToDisplay'));
 	            }
-	        }
-	    } elseif ($oObject instanceof VLAN) {
-	        if (!$bEditMode) {
+	        } elseif ($oObject instanceof VLAN) {
 	            $iVLANId = $oObject->GetKey();
 
 		        $sOQL = "SELECT lnkIPInterfaceToIPAddress AS l1 JOIN IPInterface AS int ON l1.ipinterface_id = int.id JOIN lnkPhysicalInterfaceToVLAN AS l2 ON l2.physicalinterface_id = int.id JOIN VLAN AS v ON l2.vlan_id = v.id WHERE v.id = :vlan_id";
-	            if(class_exists('LogicalInterface')) {
+	            if (class_exists('LogicalInterface')) {
 		            $sOQL .= " UNION SELECT lnkIPInterfaceToIPAddress AS l1 JOIN IPInterface AS int ON l1.ipinterface_id = int.id JOIN lnkLogicalInterfaceToVLAN AS l2 ON l2.logicalinterface_id = int.id JOIN VLAN AS v ON l2.vlan_id = v.id WHERE v.id = :vlan_id";
 	            }
 		        $oLnkSet =  new CMDBObjectSet(DBObjectSearch::FromOQL($sOQL), array(), array('vlan_id' => $iVLANId));

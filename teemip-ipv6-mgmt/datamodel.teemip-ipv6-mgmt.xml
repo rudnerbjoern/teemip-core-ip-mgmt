@@ -16,12 +16,11 @@
         <db_key_field>id</db_key_field>
         <db_final_class_field/>
         <naming>
-          <format>%1$s</format>
           <attributes>
             <attribute id="name"/>
           </attributes>
         </naming>
-        <icon>asset/img/ipv6block.png</icon>
+        <icon>asset/img/icons8-modulev6-48.png</icon>
         <reconciliation>
           <attributes>
             <attribute id="name"/>
@@ -324,12 +323,11 @@
         <db_key_field>id</db_key_field>
         <db_final_class_field/>
         <naming>
-          <format>%1$s</format>
           <attributes>
             <attribute id="ip"/>
           </attributes>
         </naming>
-        <icon>asset/img/ipv6subnet.png</icon>
+        <icon>asset/img/icons8-subnetv6-48.png</icon>
         <reconciliation>
           <attributes>
             <attribute id="ip"/>
@@ -738,12 +736,11 @@
         <db_key_field>id</db_key_field>
         <db_final_class_field/>
         <naming>
-          <format>%1$s</format>
           <attributes>
             <attribute id="range"/>
           </attributes>
         </naming>
-        <icon>asset/img/ipv6range.png</icon>
+        <icon>asset/img/icons8-slicev6-48.png</icon>
         <reconciliation>
           <attributes>
             <attribute id="range"/>
@@ -966,12 +963,11 @@
         <db_key_field>id</db_key_field>
         <db_final_class_field/>
         <naming>
-          <format>%1$s</format>
           <attributes>
             <attribute id="ip"/>
           </attributes>
         </naming>
-        <icon>asset/img/ipv6address.png</icon>
+        <icon>asset/img/icons8-rj45v6-48.png</icon>
         <reconciliation>
           <attributes>
             <attribute id="fqdn"/>
@@ -1241,7 +1237,7 @@
               <dashlet id="teemip-201" xsi:type="DashletHeaderStatic" _delta="define">
                 <rank>1</rank>
                 <title>Menu:IPSpace:IPv6Objects</title>
-                <icon>teemip-ipv6-mgmt/asset/img/ipv6object.png</icon>
+                <icon>teemip-ipv6-mgmt/asset/img/icons8-internet-folderv6-48.png</icon>
               </dashlet>
               <dashlet id="teemip-211" xsi:type="DashletBadge" _delta="define">
                 <rank>2</rank>
